@@ -11,6 +11,12 @@ export interface GeneratedRecipe {
   time: string;
   ingredients: string[];
   instructions: string[];
+  nutrition: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 }
 
 export async function generateRecipe(ingredients: string[]): Promise<GeneratedRecipe> {
@@ -28,7 +34,13 @@ Please respond ONLY with a valid JSON object in this exact format:
   "difficulty": "Easy|Medium|Hard",
   "time": "X minutes",
   "ingredients": ["ingredient 1", "ingredient 2", "..."],
-  "instructions": ["Step 1", "Step 2", "..."]
+  "instructions": ["Step 1", "Step 2", "..."],
+  "nutrition": {
+    "calories": 400,
+    "protein": 30,
+    "carbs": 14,
+    "fat": 28
+  }
 }
 
 Make sure to:
@@ -39,6 +51,8 @@ Make sure to:
 - Use proper difficulty level based on complexity
 - Include the provided ingredients plus any necessary additional ingredients
 - Keep instructions concise but detailed enough to follow
+- Calculate accurate nutritional information per serving (calories, protein in grams, carbs in grams, fat in grams)
+- Base nutrition on realistic portion sizes
 - Do NOT include numbers in the instructions array - just the instruction text`;
 
   try {
@@ -47,14 +61,14 @@ Make sure to:
       messages: [
         {
           role: "system",
-          content: "You are a professional chef assistant. Always respond with valid JSON only, no additional text or markdown formatting."
+          content: "You are a professional chef assistant with nutritional expertise. Always respond with valid JSON only, no additional text or markdown formatting. Include accurate nutritional information."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      max_tokens: 1000,
+      max_tokens: 1200,
       temperature: 0.8,
     });
 
@@ -70,7 +84,7 @@ Make sure to:
       const recipe = JSON.parse(cleanedContent) as GeneratedRecipe;
       
       // Validate the response structure
-      if (!recipe.title || !recipe.difficulty || !recipe.time || !recipe.ingredients || !recipe.instructions) {
+      if (!recipe.title || !recipe.difficulty || !recipe.time || !recipe.ingredients || !recipe.instructions || !recipe.nutrition) {
         throw new Error('Invalid recipe structure from OpenAI');
       }
       
