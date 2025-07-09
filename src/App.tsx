@@ -281,12 +281,12 @@ function App() {
               {/* Pricing Content */}
               <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
                 <div className="text-center max-w-4xl mx-auto px-6">
-                  {/* Free Tier Card */}
+                  {/* Starter Tier Card */}
                   <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 mb-8 max-w-lg mx-auto">
                     <div className="mb-6">
-                      <h2 className="text-2xl font-bold mb-2">Try ForkedAI Free</h2>
-                      <p className="text-4xl font-bold">$0</p>
-                      <p className="text-gray-400 mt-2">Perfect for trying out our AI-powered recipe generation</p>
+                      <h2 className="text-2xl font-bold mb-2">Try ForkedAI</h2>
+                      <p className="text-4xl font-bold">$0.99</p>
+                      <p className="text-gray-400 mt-2">Affordable access to AI-powered recipe generation</p>
                     </div>
                     
                     <div className="space-y-3 mb-8 text-left">
@@ -312,7 +312,7 @@ function App() {
                       onClick={handleTryNow}
                       className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
                     >
-                      {user ? 'Try Free Now →' : 'Sign In to Try Free →'}
+                      {user ? 'Try Now →' : 'Sign In to Try →'}
                     </button>
                   </div>
 
