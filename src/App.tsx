@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, User, LogOut } from 'lucide-react';
 import { generateRecipe as generateRecipeWithAI, type GeneratedRecipe } from './api/openai';
 import { generateFoodImage } from './api/backend';
@@ -12,7 +12,18 @@ interface Question {
   options: string[];
 }
 
-interface Recipe extends GeneratedRecipe {
+interface Recipe {
+  title: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  time: string;
+  ingredients: string[];
+  instructions: string[];
+  nutrition: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
   image?: string;
 }
 
@@ -82,6 +93,23 @@ const questions: Question[] = [
   }
 ];
 
+// Helper functions for managing survey completion
+const getSurveyCompletionKey = (userId: string) => `survey_completed_${userId}`;
+
+const hasSurveyBeenCompleted = (userId: string): boolean => {
+  return localStorage.getItem(getSurveyCompletionKey(userId)) === 'true';
+};
+
+const markSurveyAsCompleted = (userId: string, answers: Record<string, string>) => {
+  localStorage.setItem(getSurveyCompletionKey(userId), 'true');
+  localStorage.setItem(`survey_answers_${userId}`, JSON.stringify(answers));
+};
+
+const clearSurveyData = (userId: string) => {
+  localStorage.removeItem(getSurveyCompletionKey(userId));
+  localStorage.removeItem(`survey_answers_${userId}`);
+};
+
 function App() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -93,6 +121,7 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3);
+  const [surveyAlreadyCompleted, setSurveyAlreadyCompleted] = useState(false);
 
   // Calculate progress
   const progress = ((currentQuestion + 1) / questions.length) * 100;
@@ -132,10 +161,20 @@ function App() {
     setIsGenerating(false);
     setGeneratedRecipe(null);
     setRemainingGenerations(3);
+    setSurveyAlreadyCompleted(false);
   };
 
-  const handleContinueToPricing = () => {
+  const handleContinueToPricing = (user: AuthUser) => {
+    // Mark survey as completed when user proceeds to pricing
+    markSurveyAsCompleted(user.id, answers);
     setShowPricing(true);
+  };
+
+  const handleRetakeSurvey = (user: AuthUser) => {
+    // Clear survey data to allow retaking
+    clearSurveyData(user.id);
+    setSurveyAlreadyCompleted(false);
+    handleRestart();
   };
 
   const addIngredient = () => {
@@ -206,13 +245,158 @@ function App() {
   return (
     <Auth>
       {({ user, signIn, signOut }) => {
-        // Handle Try Now button - require authentication
-        const handleTryNow = () => {
-          if (!user) {
-            signIn();
-            return;
+        // Check if user has already completed the survey when user state changes
+        useEffect(() => {
+          if (user) {
+            setSurveyAlreadyCompleted(hasSurveyBeenCompleted(user.id));
           }
-          // User is authenticated, proceed to recipe generator
+        }, [user]);
+
+        // Welcome Screen - Show when no user is signed in
+        if (!user) {
+          return (
+            <div className="min-h-screen bg-black text-white">
+              {/* Header with Logo */}
+              <div className="p-6">
+                <div className="flex items-center">
+                  <svg 
+                    version="1.1" 
+                    id="fi_45433" 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    xmlnsXlink="http://www.w3.org/1999/xlink" 
+                    x="0px" 
+                    y="0px" 
+                    width="40px" 
+                    height="40px" 
+                    viewBox="0 0 380.711 380.711" 
+                    className="fill-white"
+                  >
+                    <g>
+                      <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
+                        l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
+                        c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
+                        c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
+                        c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
+                        c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
+                        c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+
+              {/* Welcome Content */}
+              <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
+                <div className="text-center max-w-2xl mx-auto px-6">
+                  <div className="mb-12">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                      Welcome to Our Cooking Survey
+                    </h1>
+                    <p className="text-xl text-gray-300 mb-8">
+                      Help us understand your cooking journey by sharing your experiences. 
+                      This survey takes just a few minutes and helps us create better cooking solutions.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <button
+                      onClick={signIn}
+                      className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Sign In to Start Survey
+                    </button>
+                    
+                    <p className="text-sm text-gray-400">
+                      Sign in required to prevent duplicate responses and save your progress
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Survey Already Completed Screen
+        if (surveyAlreadyCompleted && !showPricing && !showRecipeGenerator) {
+          return (
+            <div className="min-h-screen bg-black text-white">
+              {/* Header with Logo and Auth */}
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <svg 
+                      version="1.1" 
+                      id="fi_45433" 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      xmlnsXlink="http://www.w3.org/1999/xlink" 
+                      x="0px" 
+                      y="0px" 
+                      width="40px" 
+                      height="40px" 
+                      viewBox="0 0 380.711 380.711" 
+                      className="fill-white"
+                    >
+                      <g>
+                        <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
+                          l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
+                          c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
+                          c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
+                          c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
+                          c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
+                          c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
+                      </g>
+                    </svg>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <User className="w-4 h-4" />
+                      <span>{user.email}</span>
+                    </div>
+                    <button 
+                      onClick={signOut}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Already Completed Content */}
+              <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
+                <div className="text-center max-w-2xl mx-auto px-6">
+                  <div className="mb-12">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                      Survey Already Completed
+                    </h1>
+                    <p className="text-xl text-gray-300 mb-8">
+                      Thank you! You've already completed this survey. You can proceed to explore our recipe generator or retake the survey if you'd like to update your responses.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setShowPricing(true)}
+                      className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Continue to Recipe Generator
+                    </button>
+
+                    <button
+                      onClick={() => handleRetakeSurvey(user)}
+                      className="w-full bg-gray-800 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-700 transition-colors"
+                    >
+                      Retake Survey
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Handle Try Now button - require authentication (already authenticated at this point)
+        const handleTryNow = () => {
           setShowRecipeGenerator(true);
           setShowPricing(false);
         };
@@ -680,7 +864,7 @@ function App() {
 
                   <div className="space-y-4">
                     <button
-                      onClick={handleContinueToPricing}
+                      onClick={() => handleContinueToPricing(user)}
                       className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
                     >
                       Continue →
