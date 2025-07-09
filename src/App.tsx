@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight, Plus, X, User, LogOut } from 'lucide-react';
 import { generateRecipe as generateRecipeWithAI, type GeneratedRecipe } from './api/openai';
 import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
+import LoadingAnimation from './components/LoadingAnimation';
+import loadingAnimationData from './assets/loading-animation.json';
 
 interface Question {
   id: string;
@@ -620,53 +622,61 @@ function App() {
                   </button>
                 </div>
               </div>
+              
+              {/* Loading Animation for Recipe Generator */}
+              {isGenerating && (
+                <LoadingAnimation 
+                  animationData={loadingAnimationData}
+                  message="Generating your perfect recipe..."
+                />
+              )}
             </div>
           );
         }
 
         // Completion Screen
-        if (isCompleted) {
-          return (
-            <div className="min-h-screen bg-black text-white">
-              {/* Header with Logo */}
-              <div className="p-6">
-                <div className="flex items-center">
-                  <svg 
-                    version="1.1" 
-                    id="fi_45433" 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    xmlnsXlink="http://www.w3.org/1999/xlink" 
-                    x="0px" 
-                    y="0px" 
-                    width="40px" 
-                    height="40px" 
-                    viewBox="0 0 380.711 380.711" 
-                    className="fill-white"
-                  >
-                    <g>
-                      <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
-                        l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
-                        c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
-                        c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
-                        c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
-                        c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
-                        c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
-                    </g>
-                  </svg>
-                </div>
-              </div>
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        {/* Header with Logo */}
+        <div className="p-6">
+          <div className="flex items-center">
+            <svg 
+              version="1.1" 
+              id="fi_45433" 
+              xmlns="http://www.w3.org/2000/svg" 
+              xmlnsXlink="http://www.w3.org/1999/xlink" 
+              x="0px" 
+              y="0px" 
+              width="40px" 
+              height="40px" 
+              viewBox="0 0 380.711 380.711" 
+              className="fill-white"
+            >
+              <g>
+                <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
+                  l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
+                  c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
+                  c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
+                  c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
+                  c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
+                  c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
+              </g>
+            </svg>
+          </div>
+        </div>
 
-              {/* Completion Screen */}
-              <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
-                <div className="text-center max-w-2xl mx-auto px-6">
+        {/* Completion Screen */}
+        <div className="flex items-center justify-center min-h-[calc(100vh-120px)]">
+          <div className="text-center max-w-2xl mx-auto px-6">
                   <div className="mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                      Thank You!
-                    </h1>
-                    <p className="text-xl text-gray-300 mb-8">
-                      Your responses have been recorded. We appreciate you taking the time to share your cooking experiences with us.
-                    </p>
-                  </div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Thank You!
+              </h1>
+              <p className="text-xl text-gray-300 mb-8">
+                Your responses have been recorded. We appreciate you taking the time to share your cooking experiences with us.
+              </p>
+            </div>
 
                   <div className="space-y-4">
                     <button
@@ -675,140 +685,148 @@ function App() {
                     >
                       Continue →
                     </button>
-                    
-                    <button
-                      onClick={handleRestart}
+
+            <button
+              onClick={handleRestart}
                       className="text-gray-400 hover:text-white transition-colors underline"
-                    >
-                      Take Survey Again
-                    </button>
+            >
+              Take Survey Again
+            </button>
                   </div>
-                </div>
-              </div>
-            </div>
-          );
-        }
+          </div>
+        </div>
+      </div>
+    );
+  }
 
         // Main Survey
-        return (
-          <div className="min-h-screen bg-black text-white">
-            {/* Header with Logo */}
-            <div className="p-6">
-              <div className="flex items-center">
-                <svg 
-                  version="1.1" 
-                  id="fi_45433" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  xmlnsXlink="http://www.w3.org/1999/xlink" 
-                  x="0px" 
-                  y="0px" 
-                  width="40px" 
-                  height="40px" 
-                  viewBox="0 0 380.711 380.711" 
-                  className="fill-white"
-                >
-                  <g>
-                    <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
-                      l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
-                      c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
-                      c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
-                      c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
-                      c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
-                      c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
-                  </g>
-                </svg>
-              </div>
-            </div>
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header with Logo */}
+      <div className="p-6">
+        <div className="flex items-center">
+          <svg 
+            version="1.1" 
+            id="fi_45433" 
+            xmlns="http://www.w3.org/2000/svg" 
+            xmlnsXlink="http://www.w3.org/1999/xlink" 
+            x="0px" 
+            y="0px" 
+            width="40px" 
+            height="40px" 
+            viewBox="0 0 380.711 380.711" 
+            className="fill-white"
+          >
+            <g>
+              <path d="M380.711,57.465l-8.808-8.842l-89.742,95l-10.585-10.625l92.357-92.357l-7.75-7.715l-92.938,92.932l-8.772-8.778
+                l92.926-92.944l-8.539-8.528l-92.938,92.932l-10.411-10.41l95.936-89.987l-8.052-8.052l-88.418,68.853c0,0-3.207,2.713-4.311,3.828
+                c-12.13,12.124-17.347,28.594-15.615,44.424c-3.719,61.666-56.862,75.254-64.774,83.166
+                c-8.749,8.796-143.77,143.805-143.77,143.805l0.023,0.022c-0.104,0.117-0.221,0.141-0.337,0.256
+                c-8.272,8.273-8.25,21.704,0.012,29.965c8.249,8.272,21.715,8.272,29.953,0.023c0.116-0.128,0.174-0.244,0.255-0.337l0.023,0.022
+                c0,0,133.359-133.312,143.537-143.502c9.179-9.213,30.812-64.303,87.257-64.878c0.058-0.023,0.209-0.046,0.29-0.046
+                c13.28,0.372,26.677-4.032,37.354-13.361c0.755-0.663,2.486-2.452,2.486-2.452L380.711,57.465z"></path>
+            </g>
+          </svg>
+        </div>
+      </div>
 
-            {/* Progress Bar */}
-            <div className="px-6 pb-8">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-400">Progress</span>
-                  <span className="text-sm text-gray-400">
-                    {currentQuestion + 1} of {questions.length}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
-                  <div 
-                    className="bg-white h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Survey Content */}
-            <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-              <div className="w-full max-w-4xl mx-auto px-6">
-                <div className="text-center mb-12">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-                    {questions[currentQuestion].question}
-                  </h1>
-                  <p className="text-gray-400 text-lg">
-                    Select the option that best describes your experience
-                  </p>
-                </div>
-
-                {/* Answer Options */}
-                <div className="space-y-4 mb-12">
-                  {questions[currentQuestion].options.map((option, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleAnswerSelect(option)}
-                      className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left hover:border-gray-600 ${
-                        selectedOption === option
-                          ? 'border-white bg-white text-black'
-                          : 'border-gray-700 bg-gray-900 text-white hover:bg-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-medium">{option}</span>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          selectedOption === option
-                            ? 'border-black bg-black'
-                            : 'border-gray-400'
-                        }`}>
-                          {selectedOption === option && (
-                            <div className="w-2 h-2 rounded-full bg-white"></div>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Navigation */}
-                <div className="flex justify-between items-center">
-                  <button
-                    onClick={handlePrevious}
-                    disabled={currentQuestion === 0}
-                    className={`flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
-                      currentQuestion === 0
-                        ? 'bg-black text-gray-600 cursor-not-allowed'
-                        : 'bg-white text-black hover:bg-gray-200'
-                    }`}
-                  >
-                    <ChevronLeft className="w-5 h-5 mr-2" />
-                    Previous
-                  </button>
-
-                  <button
-                    onClick={handleNext}
-                    disabled={!selectedOption}
-                    className={`flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
-                      !selectedOption
-                        ? 'bg-black text-gray-600 cursor-not-allowed'
-                        : 'bg-white text-black hover:bg-gray-200'
-                    }`}
-                  >
-                    {currentQuestion === questions.length - 1 ? 'Complete' : 'Next'}
-                    <ChevronRight className="w-5 h-5 ml-2" />
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Progress Bar */}
+      <div className="px-6 pb-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-400">Progress</span>
+            <span className="text-sm text-gray-400">
+              {currentQuestion + 1} of {questions.length}
+            </span>
           </div>
+          <div className="w-full bg-gray-800 rounded-full h-2">
+            <div 
+              className="bg-white h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Survey Content */}
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="w-full max-w-4xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              {questions[currentQuestion].question}
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Select the option that best describes your experience
+            </p>
+          </div>
+
+          {/* Answer Options */}
+          <div className="space-y-4 mb-12">
+            {questions[currentQuestion].options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(option)}
+                className={`w-full p-6 rounded-xl border-2 transition-all duration-200 text-left hover:border-gray-600 ${
+                  selectedOption === option
+                    ? 'border-white bg-white text-black'
+                    : 'border-gray-700 bg-gray-900 text-white hover:bg-gray-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-medium">{option}</span>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    selectedOption === option
+                      ? 'border-black bg-black'
+                      : 'border-gray-400'
+                  }`}>
+                    {selectedOption === option && (
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center">
+            <button
+              onClick={handlePrevious}
+              disabled={currentQuestion === 0}
+              className={`flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
+                currentQuestion === 0
+                  ? 'bg-black text-gray-600 cursor-not-allowed'
+                  : 'bg-white text-black hover:bg-gray-200'
+              }`}
+            >
+              <ChevronLeft className="w-5 h-5 mr-2" />
+              Previous
+            </button>
+
+            <button
+              onClick={handleNext}
+              disabled={!selectedOption}
+              className={`flex items-center px-6 py-3 rounded-lg font-medium transition-colors ${
+                !selectedOption
+                  ? 'bg-black text-gray-600 cursor-not-allowed'
+                  : 'bg-white text-black hover:bg-gray-200'
+              }`}
+            >
+              {currentQuestion === questions.length - 1 ? 'Complete' : 'Next'}
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Loading Animation */}
+      {isGenerating && (
+        <LoadingAnimation 
+          animationData={loadingAnimationData}
+          message="Generating your perfect recipe..."
+        />
+      )}
+    </div>
         );
       }}
     </Auth>
