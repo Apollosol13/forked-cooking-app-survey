@@ -19,14 +19,14 @@ export interface GeneratedRecipe {
   };
 }
 
-export async function generateRecipe(ingredients: string[]): Promise<GeneratedRecipe> {
+export async function generateRecipe(ingredients: string[], servings: number = 4): Promise<GeneratedRecipe> {
   if (!import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'your_openai_api_key_here') {
     throw new Error('OpenAI API key not configured. Please add your API key to .env.local');
   }
 
   const ingredientsText = ingredients.join(', ');
   
-  const prompt = `Create a delicious recipe using these ingredients: ${ingredientsText}.
+  const prompt = `Create a delicious recipe using these ingredients: ${ingredientsText} for ${servings} servings.
 
 Please respond ONLY with a valid JSON object in this exact format:
 {
@@ -45,14 +45,14 @@ Please respond ONLY with a valid JSON object in this exact format:
 
 Make sure to:
 - Create a creative, appetizing recipe title
-- Include reasonable quantities for ingredients
+- Include reasonable quantities for ingredients scaled for exactly ${servings} servings
 - Provide clear, step-by-step cooking instructions WITHOUT numbers (just the instruction text)
 - Estimate realistic cooking time
 - Use proper difficulty level based on complexity
 - Include the provided ingredients plus any necessary additional ingredients
 - Keep instructions concise but detailed enough to follow
 - Calculate accurate nutritional information per serving (calories, protein in grams, carbs in grams, fat in grams)
-- Base nutrition on realistic portion sizes
+- Base nutrition on realistic portion sizes for ${servings} servings
 - Do NOT include numbers in the instructions array - just the instruction text`;
 
   try {

@@ -4,6 +4,7 @@ import { generateRecipe as generateRecipeWithAI, type GeneratedRecipe } from './
 import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
+import { ServingsSlider } from './components/ServingsSlider';
 import loadingAnimationData from './assets/loading-animation.json';
 
 interface Question {
@@ -118,6 +119,7 @@ function App() {
   const [showPricing, setShowPricing] = useState(false);
   const [showRecipeGenerator, setShowRecipeGenerator] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>(['']);
+  const [servings, setServings] = useState<number>(4);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3);
@@ -158,6 +160,7 @@ function App() {
     setShowPricing(false);
     setShowRecipeGenerator(false);
     setIngredients(['']);
+    setServings(4);
     setIsGenerating(false);
     setGeneratedRecipe(null);
     setRemainingGenerations(3);
@@ -207,8 +210,8 @@ function App() {
     
     try {
       // Generate recipe using OpenAI
-      console.log('Calling OpenAI with ingredients:', validIngredients);
-      const aiRecipe = await generateRecipeWithAI(validIngredients);
+      console.log('Calling OpenAI with ingredients:', validIngredients, 'for', servings, 'servings');
+      const aiRecipe = await generateRecipeWithAI(validIngredients, servings);
       console.log('Received recipe from OpenAI:', aiRecipe);
       
       // Optional: Generate image for the recipe using Replicate via backend
@@ -240,6 +243,7 @@ function App() {
   const resetForNewRecipe = () => {
     setGeneratedRecipe(null);
     setIngredients(['']);
+    setServings(4);
   };
 
   return (
@@ -774,6 +778,16 @@ function App() {
                         </button>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Servings Slider */}
+                  <div className="mb-8">
+                    <ServingsSlider
+                      servings={servings}
+                      onChange={setServings}
+                      min={1}
+                      max={8}
+                    />
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-4 mb-8">
