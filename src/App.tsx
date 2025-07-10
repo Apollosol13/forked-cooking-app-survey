@@ -741,7 +741,7 @@ function App() {
               <div className="max-w-4xl mx-auto px-6 pb-12">
                 <div className="text-center mb-8">
                   <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                    Smarter Recipes, Less Effort
+                    Recipes Made For You
                   </h1>
                   <p className="text-xl text-gray-300 mb-4">
                     Enter the ingredients you have and we'll create a delicious recipe for you
