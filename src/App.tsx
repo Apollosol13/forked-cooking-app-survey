@@ -780,6 +780,17 @@ function App() {
                     ))}
                   </div>
 
+                  {/* Add Ingredient Button */}
+                  <div className="mb-8">
+                    <button
+                      onClick={addIngredient}
+                      className="flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Add Ingredient
+                    </button>
+                  </div>
+
                   {/* Servings Slider */}
                   <div className="mb-8">
                     <ServingsSlider
@@ -790,19 +801,12 @@ function App() {
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                    <button
-                      onClick={addIngredient}
-                      className="flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                    >
-                      <Plus className="w-5 h-5 mr-2" />
-                      Add Ingredient
-                    </button>
-                    
+                  {/* Generate Recipe Button */}
+                  <div className="mb-8">
                     <button
                       onClick={generateRecipe}
                       disabled={isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0}
-                      className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
+                      className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
                         isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0
                           ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                           : 'bg-white text-black hover:bg-gray-200'
