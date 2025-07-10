@@ -5,7 +5,6 @@ import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
 import { ServingsSlider } from './components/ServingsSlider';
-import loadingAnimationData from './assets/loading-animation.json';
 
 interface Question {
   id: string;
@@ -828,7 +827,6 @@ function App() {
               {/* Loading Animation for Recipe Generator */}
               {isGenerating && (
                 <LoadingAnimation 
-                  animationData={loadingAnimationData}
                   message="Generating your perfect recipe..."
                 />
               )}
@@ -1024,7 +1022,6 @@ function App() {
       {/* Loading Animation */}
       {isGenerating && (
         <LoadingAnimation 
-          animationData={loadingAnimationData}
           message="Generating your perfect recipe..."
         />
       )}
