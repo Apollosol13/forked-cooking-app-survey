@@ -5,7 +5,9 @@ import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
 import { ServingsSlider } from './components/ServingsSlider';
+import Lottie from 'lottie-react';
 import loadingAnimationData from './assets/loading-animation.json';
+import confettiAnimationData from './assets/confetti-animation.json';
 
 interface Question {
   id: string;
@@ -121,6 +123,7 @@ function App() {
   const [ingredients, setIngredients] = useState<string[]>(['']);
   const [servings, setServings] = useState<number>(4);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3);
   const [surveyAlreadyCompleted, setSurveyAlreadyCompleted] = useState(false);
@@ -202,6 +205,14 @@ function App() {
     const validIngredients = ingredients.filter(ing => ing.trim() !== '');
     if (validIngredients.length === 0) return;
 
+    // Trigger confetti immediately on button click
+    setShowConfetti(true);
+    
+    // Auto-hide confetti after animation duration (3.7 seconds)
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 3700);
+
     setIsGenerating(true);
     
     // Debug: Check if API key is loaded
@@ -244,6 +255,7 @@ function App() {
     setGeneratedRecipe(null);
     setIngredients(['']);
     setServings(4);
+    setShowConfetti(false);
   };
 
   return (
@@ -825,12 +837,31 @@ function App() {
                 </div>
               </div>
               
+              {/* Standalone Confetti Animation */}
+              {showConfetti && (
+                <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
+                  <Lottie
+                    animationData={confettiAnimationData}
+                    loop={false}
+                    autoplay={true}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0
+                    }}
+                    onComplete={() => console.log('Confetti animation completed')}
+                  />
+                </div>
+              )}
+
               {/* Loading Animation for Recipe Generator */}
               {isGenerating && (
                 <LoadingAnimation 
                   animationData={loadingAnimationData}
                   message="Generating your perfect recipe..."
-                  showConfetti={true}
+                  showConfetti={false}
                 />
               )}
             </div>
@@ -1022,12 +1053,31 @@ function App() {
         </div>
       </div>
       
+      {/* Standalone Confetti Animation */}
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
+          <Lottie
+            animationData={confettiAnimationData}
+            loop={false}
+            autoplay={true}
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}
+            onComplete={() => console.log('Confetti animation completed')}
+          />
+        </div>
+      )}
+
       {/* Loading Animation */}
       {isGenerating && (
         <LoadingAnimation 
           animationData={loadingAnimationData}
           message="Generating your perfect recipe..."
-          showConfetti={true}
+          showConfetti={false}
         />
       )}
     </div>
