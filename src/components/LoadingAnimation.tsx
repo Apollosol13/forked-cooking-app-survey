@@ -13,11 +13,15 @@ const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
   message = "Generating your perfect recipe...",
   showConfetti = false
 }) => {
+  // Debug logging
+  console.log('LoadingAnimation rendered with showConfetti:', showConfetti);
+  console.log('Confetti animation data loaded:', !!confettiAnimationData);
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
       {/* Confetti Animation - Full Screen Overlay */}
       {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-60">
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 9999 }}>
           <Lottie
             animationData={confettiAnimationData}
             loop={false}
@@ -29,6 +33,8 @@ const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
               top: 0,
               left: 0
             }}
+            onComplete={() => console.log('Confetti animation completed')}
+            onLoopComplete={() => console.log('Confetti loop completed')}
           />
         </div>
       )}

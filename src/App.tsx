@@ -1027,6 +1027,7 @@ function App() {
         <LoadingAnimation 
           animationData={loadingAnimationData}
           message="Generating your perfect recipe..."
+          showConfetti={true}
         />
       )}
     </div>
