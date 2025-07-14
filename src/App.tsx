@@ -205,6 +205,7 @@ function App() {
     const validIngredients = ingredients.filter(ing => ing.trim() !== '');
     if (validIngredients.length === 0) return;
 
+    console.log('🔄 Starting recipe generation...');
     setIsGenerating(true);
     
     // Debug: Check if API key is loaded
@@ -234,13 +235,19 @@ function App() {
       setGeneratedRecipe(recipe);
       setRemainingGenerations(prev => prev - 1);
       
-      // Trigger confetti celebration after successful recipe generation
-      setShowConfetti(true);
+      console.log('🎉 Recipe generated successfully! Triggering confetti...');
       
-      // Auto-hide confetti after animation duration (3.7 seconds)
+      // Small delay to ensure recipe is displayed first, then confetti
       setTimeout(() => {
-        setShowConfetti(false);
-      }, 3700);
+        console.log('🎊 Showing confetti now!');
+        setShowConfetti(true);
+        
+        // Auto-hide confetti after animation duration (3.7 seconds)
+        setTimeout(() => {
+          console.log('✨ Hiding confetti');
+          setShowConfetti(false);
+        }, 3700);
+      }, 100); // Small delay to ensure recipe renders first
       
     } catch (error) {
       console.error('Recipe generation failed:', error);
@@ -541,9 +548,13 @@ function App() {
           if (generatedRecipe) {
             return (
               <div className="min-h-screen bg-black text-white relative">
-                {/* Success Confetti Animation */}
+                                {/* Success Confetti Animation */}
                 {showConfetti && (
                   <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
+                    {/* Debug indicator */}
+                    <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded z-50">
+                      🎊 CONFETTI ACTIVE!
+                    </div>
                     <Lottie
                       animationData={confettiAnimationData}
                       loop={false}
@@ -555,10 +566,15 @@ function App() {
                         top: 0,
                         left: 0
                       }}
-                      onComplete={() => console.log('Confetti celebration completed!')}
+                      onComplete={() => console.log('🎊 Confetti celebration animation completed!')}
+                      onLoopComplete={() => console.log('🎊 Confetti loop completed!')}
+                      onEnterFrame={() => console.log('🎊 Confetti frame rendered')}
                     />
                   </div>
                 )}
+                 
+                 {/* Debug log */}
+                 {(() => { console.log('🎭 Recipe display rendered, showConfetti:', showConfetti); return null; })()}
                 {/* Header with Logo and Auth */}
                 <div className="p-6">
                   <div className="flex items-center justify-between">
