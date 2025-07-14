@@ -205,14 +205,6 @@ function App() {
     const validIngredients = ingredients.filter(ing => ing.trim() !== '');
     if (validIngredients.length === 0) return;
 
-    // Trigger confetti immediately on button click
-    setShowConfetti(true);
-    
-    // Auto-hide confetti after animation duration (3.7 seconds)
-    setTimeout(() => {
-      setShowConfetti(false);
-    }, 3700);
-
     setIsGenerating(true);
     
     // Debug: Check if API key is loaded
@@ -241,6 +233,15 @@ function App() {
       
       setGeneratedRecipe(recipe);
       setRemainingGenerations(prev => prev - 1);
+      
+      // Trigger confetti celebration after successful recipe generation
+      setShowConfetti(true);
+      
+      // Auto-hide confetti after animation duration (3.7 seconds)
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 3700);
+      
     } catch (error) {
       console.error('Recipe generation failed:', error);
       
@@ -539,7 +540,25 @@ function App() {
 
           if (generatedRecipe) {
             return (
-              <div className="min-h-screen bg-black text-white">
+              <div className="min-h-screen bg-black text-white relative">
+                {/* Success Confetti Animation */}
+                {showConfetti && (
+                  <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
+                    <Lottie
+                      animationData={confettiAnimationData}
+                      loop={false}
+                      autoplay={true}
+                      style={{ 
+                        width: '100%', 
+                        height: '100%',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
+                      }}
+                      onComplete={() => console.log('Confetti celebration completed!')}
+                    />
+                  </div>
+                )}
                 {/* Header with Logo and Auth */}
                 <div className="p-6">
                   <div className="flex items-center justify-between">
@@ -837,25 +856,6 @@ function App() {
                 </div>
               </div>
               
-              {/* Standalone Confetti Animation */}
-              {showConfetti && (
-                <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
-                  <Lottie
-                    animationData={confettiAnimationData}
-                    loop={false}
-                    autoplay={true}
-                    style={{ 
-                      width: '100%', 
-                      height: '100%',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0
-                    }}
-                    onComplete={() => console.log('Confetti animation completed')}
-                  />
-                </div>
-              )}
-
               {/* Loading Animation for Recipe Generator */}
               {isGenerating && (
                 <LoadingAnimation 
@@ -1053,25 +1053,6 @@ function App() {
         </div>
       </div>
       
-      {/* Standalone Confetti Animation */}
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
-          <Lottie
-            animationData={confettiAnimationData}
-            loop={false}
-            autoplay={true}
-            style={{ 
-              width: '100%', 
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0
-            }}
-            onComplete={() => console.log('Confetti animation completed')}
-          />
-        </div>
-      )}
-
       {/* Loading Animation */}
       {isGenerating && (
         <LoadingAnimation 
