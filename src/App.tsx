@@ -5,6 +5,7 @@ import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
 import { ServingsSlider } from './components/ServingsSlider';
+import SpeechToText from './components/SpeechToText';
 import Lottie from 'lottie-react';
 import loadingAnimationData from './assets/loading-animation.json';
 import confettiAnimationData from './assets/confetti-animation.json';
@@ -197,6 +198,35 @@ function App() {
     const newIngredients = [...ingredients];
     newIngredients[index] = value;
     setIngredients(newIngredients);
+  };
+
+  const handleSpeechTranscript = (transcript: string) => {
+    console.log('🎤 Speech transcript:', transcript);
+  };
+
+  const handleIngredientsDetected = (detectedIngredients: string[]) => {
+    console.log('🥕 Detected ingredients:', detectedIngredients);
+    
+    // Add detected ingredients to the ingredients list
+    const newIngredients = [...ingredients];
+    
+    // Remove empty ingredients first
+    const filteredIngredients = newIngredients.filter(ing => ing.trim() !== '');
+    
+    // Add detected ingredients that aren't already in the list
+    detectedIngredients.forEach(ingredient => {
+      if (!filteredIngredients.some(existing => 
+        existing.toLowerCase().includes(ingredient.toLowerCase()) ||
+        ingredient.toLowerCase().includes(existing.toLowerCase())
+      )) {
+        filteredIngredients.push(ingredient);
+      }
+    });
+    
+    // Always ensure there's one empty field at the end
+    filteredIngredients.push('');
+    
+    setIngredients(filteredIngredients);
   };
 
   const generateRecipe = async () => {
@@ -845,6 +875,16 @@ function App() {
                       onChange={setServings}
                       min={1}
                       max={8}
+                    />
+                  </div>
+
+                  {/* Speech to Text for Ingredients */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-bold mb-4 text-center">🎤 Or Speak Your Ingredients</h3>
+                    <SpeechToText
+                      onTranscript={handleSpeechTranscript}
+                      onIngredientsDetected={handleIngredientsDetected}
+                      className="max-w-md mx-auto"
                     />
                   </div>
 
