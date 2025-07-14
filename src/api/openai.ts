@@ -26,7 +26,7 @@ export async function generateRecipe(ingredients: string[], servings: number = 4
 
   const ingredientsText = ingredients.join(', ');
   
-  const prompt = `Create a delicious recipe using these ingredients: ${ingredientsText} for ${servings} servings.
+  const prompt = `Create a detailed, professional recipe using these ingredients: ${ingredientsText} for ${servings} servings.
 
 Please respond ONLY with a valid JSON object in this exact format:
 {
@@ -43,33 +43,47 @@ Please respond ONLY with a valid JSON object in this exact format:
   }
 }
 
-Make sure to:
-- Create a creative, appetizing recipe title
-- Include reasonable quantities for ingredients scaled for exactly ${servings} servings
-- Provide clear, step-by-step cooking instructions WITHOUT numbers (just the instruction text)
-- Estimate realistic cooking time
-- Use proper difficulty level based on complexity
-- Include the provided ingredients plus any necessary additional ingredients
-- Keep instructions concise but detailed enough to follow
-- Calculate accurate nutritional information per serving (calories, protein in grams, carbs in grams, fat in grams)
-- Base nutrition on realistic portion sizes for ${servings} servings
-- Do NOT include numbers in the instructions array - just the instruction text`;
+CRITICAL REQUIREMENTS for ingredients:
+- Include EXACT measurements with units (cups, tablespoons, teaspoons, ounces, pounds, grams, etc.)
+- Scale all quantities precisely for exactly ${servings} servings
+- Include specific cuts/types (e.g., "boneless chicken thighs" not just "chicken")
+- Add necessary pantry staples with exact amounts (salt, pepper, oil, etc.)
+- Be specific about preparation (e.g., "1 medium yellow onion, diced" not just "onion")
+
+CRITICAL REQUIREMENTS for instructions:
+- Write DETAILED step-by-step instructions with specific temperatures, times, and techniques
+- Include oven temperatures in Fahrenheit (e.g., "Preheat oven to 425°F")
+- Specify pan sizes and types (e.g., "large cast-iron skillet", "9x13 inch baking dish")
+- Include visual cues for doneness (e.g., "until golden brown and internal temperature reaches 165°F")
+- Mention resting times, marinating times, and cooling periods
+- Include specific cooking techniques (sauté, sear, braise, etc.)
+- Add seasoning timing and tasting instructions
+- Each instruction should be 15-30 words and very specific
+- Include prep work details (chopping sizes, marinating times, etc.)
+
+Additional requirements:
+- Create an appetizing, restaurant-style recipe title
+- Set realistic total cooking time including prep
+- Use appropriate difficulty: Easy (30 min or less, basic techniques), Medium (30-60 min, some skill), Hard (60+ min, advanced techniques)
+- Calculate precise nutritional information per serving based on actual ingredient quantities
+- Include the provided ingredients as the star components
+- Do NOT include numbers in the instructions array - just the detailed instruction text`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "You are a professional chef assistant with nutritional expertise. Always respond with valid JSON only, no additional text or markdown formatting. Include accurate nutritional information."
+          content: "You are a professional chef with 15+ years of culinary experience and certified nutritional expertise. You specialize in creating detailed, restaurant-quality recipes with precise measurements and professional cooking techniques. Always respond with valid JSON only, no additional text or markdown formatting. Your recipes should be detailed enough for both home cooks and culinary students to follow successfully."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      max_tokens: 1200,
-      temperature: 0.8,
+      max_tokens: 2000,
+      temperature: 0.7,
     });
 
     const content = response.choices[0]?.message?.content;
