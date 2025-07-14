@@ -581,10 +581,6 @@ function App() {
                                 {/* Success Confetti Animation */}
                 {showConfetti && (
                   <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 10000 }}>
-                    {/* Debug indicator */}
-                    <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded z-50">
-                      🎊 CONFETTI ACTIVE!
-                    </div>
                     <Lottie
                       animationData={confettiAnimationData}
                       loop={false}

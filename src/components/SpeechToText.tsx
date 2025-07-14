@@ -211,16 +211,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
         </div>
       )}
 
-      {/* Instructions */}
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-2">💡 Tips:</h4>
-        <ul className="text-xs text-gray-400 space-y-1">
-          <li>• Speak clearly and mention ingredients one by one</li>
-          <li>• Say things like "I have chicken, rice, and onions"</li>
-          <li>• Include quantities: "2 cups of rice, 1 pound of chicken"</li>
-          <li>• Click the microphone when you're done speaking</li>
-        </ul>
-      </div>
+
     </div>
   );
 };
