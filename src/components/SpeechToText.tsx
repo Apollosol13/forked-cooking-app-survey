@@ -5,16 +5,26 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Google Gemini AI ingredient extraction
 async function extractIngredientsFromText(transcript: string): Promise<string[]> {
   console.log('🔥 Starting Gemini extraction for transcript:', transcript);
+  console.log('📏 Transcript length:', transcript.length);
+  console.log('📊 Transcript type:', typeof transcript);
   
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  console.log('🔑 API Key check:');
+  console.log('  - API key exists:', !!apiKey);
+  console.log('  - API key length:', apiKey?.length || 0);
+  
   if (!apiKey) {
+    console.error('❌ Gemini API key not found');
     throw new Error('Gemini API key not found');
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  try {
+    console.log('🚀 Initializing Gemini AI...');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log('✅ Gemini model initialized successfully');
 
-  const prompt = `You are an expert ingredient extraction AI. Your job is to identify ALL food ingredients mentioned in the following transcript.
+    const prompt = `You are an expert ingredient extraction AI. Your job is to identify ALL food ingredients mentioned in the following transcript.
 
 CRITICAL RULES:
 1. Extract ingredients EXACTLY as spoken - DO NOT modify, shorten, or split multi-word ingredients
@@ -37,17 +47,21 @@ Now extract ingredients from this transcript:
 
 Return only the JSON array:`;
 
-  try {
+    console.log('📝 Prompt length:', prompt.length);
     console.log('🚀 Calling Gemini API with prompt...');
+    
     const result = await model.generateContent(prompt);
+    console.log('📥 Gemini API call completed');
+    
     const response = await result.response;
+    console.log('📥 Response received from Gemini');
+    
     const text = response.text();
+    console.log('📊 Response text extracted, length:', text.length);
     
     // COMPREHENSIVE DEBUG LOGGING
     console.log('📥 Raw Gemini response (START)');
-    console.log('📊 Response length:', text.length);
     console.log('📋 Raw text:', text);
-    console.log('🔍 Text bytes:', new TextEncoder().encode(text));
     console.log('📥 Raw Gemini response (END)');
     
     // Check for common format issues
@@ -218,6 +232,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       let silenceTimer: NodeJS.Timeout | null = null;
       let lastSpeechTime = Date.now();
       let hasSpokenSomething = false;
+      let capturedTranscript = ''; // Store transcript when silence is detected
 
       // Clear any existing timeout when starting
       const clearSpeechTimeout = () => {
@@ -244,6 +259,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
         clearSilenceTimer();
         hasSpokenSomething = false;
         lastSpeechTime = Date.now();
+        capturedTranscript = ''; // Reset captured transcript
         
         // Set a maximum timeout of 30 seconds
         speechTimeoutRef.current = setTimeout(() => {
@@ -256,13 +272,26 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
 
       recognition.onend = async () => {
         console.log('🏁 Speech recognition ended');
+        console.log('📊 DEBUG - Speech end state:');
+        console.log('  - hasSpokenSomething:', hasSpokenSomething);
+        console.log('  - finalTranscript:', `"${finalTranscript}"`);
+        console.log('  - live transcript:', `"${transcript}"`);
+        console.log('  - capturedTranscript:', `"${capturedTranscript}"`);
+        console.log('  - finalTranscript.trim():', `"${finalTranscript.trim()}"`);
+        console.log('  - transcript.trim():', `"${transcript.trim()}"`);
+        
         setIsListening(false);
         clearSpeechTimeout();
         clearSilenceTimer();
         
-        // Only extract ingredients if we have spoken something and have a transcript
-        const transcriptToUse = finalTranscript.trim() || transcript.trim();
-        if (hasSpokenSomething && transcriptToUse) {
+        // Use captured transcript from silence detection, or fallback to current state
+        const transcriptToUse = capturedTranscript || finalTranscript.trim() || transcript.trim();
+        console.log('🎯 Transcript to use for extraction:', `"${transcriptToUse}"`);
+        console.log('📏 Transcript length:', transcriptToUse.length);
+        
+        // Extract ingredients if we have any transcript content
+        if (transcriptToUse && transcriptToUse.length > 0) {
+          console.log('✅ Proceeding with ingredient extraction...');
           console.log('🎤 Speech ended naturally, extracting ingredients from transcript:', transcriptToUse);
           setIsExtracting(true);
           setError(null);
@@ -270,19 +299,35 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
             console.log('🚀 Using Gemini AI extraction');
             const geminiIngredients = await extractIngredientsFromText(transcriptToUse);
             console.log('🎯 Gemini extracted ingredients:', geminiIngredients);
-            onIngredientsDetected(geminiIngredients);
+            console.log('📊 Number of ingredients found:', geminiIngredients.length);
+            if (geminiIngredients.length > 0) {
+              console.log('✅ Calling onIngredientsDetected with:', geminiIngredients);
+              onIngredientsDetected(geminiIngredients);
+            } else {
+              console.log('⚠️ No ingredients extracted from Gemini');
+            }
           } catch (err: any) {
             console.error('❌ Gemini extraction failed, using fallback:', err);
             // Fallback to simple extraction if Gemini fails
             const simpleIngredients = extractIngredientsSimple(transcriptToUse);
             console.log('🎯 Fallback extracted ingredients:', simpleIngredients);
-            onIngredientsDetected(simpleIngredients);
+            console.log('📊 Fallback number of ingredients:', simpleIngredients.length);
+            if (simpleIngredients.length > 0) {
+              console.log('✅ Calling onIngredientsDetected with fallback:', simpleIngredients);
+              onIngredientsDetected(simpleIngredients);
+            } else {
+              console.log('⚠️ No ingredients extracted from fallback either');
+            }
             setError('Using fallback extraction (Gemini AI unavailable)');
           } finally {
             setIsExtracting(false);
           }
-        } else if (!hasSpokenSomething) {
-          console.log('🔇 No speech detected - not extracting ingredients');
+        } else {
+          console.log('❌ No transcript available for extraction');
+          console.log('  - capturedTranscript empty:', !capturedTranscript);
+          console.log('  - finalTranscript empty:', !finalTranscript.trim());
+          console.log('  - transcript empty:', !transcript.trim());
+          console.log('  - hasSpokenSomething:', hasSpokenSomething);
         }
       };
 
@@ -321,25 +366,30 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
           hasSpokenSomething = true;
         }
         
+        // Update display transcript with both final and interim
+        const fullTranscript = finalTranscript + currentFinalTranscript + interimTranscript;
+        setTranscript(fullTranscript);
+        onTranscript(fullTranscript);
+        
         // If we have any speech (final or interim), update the last speech time
         if (currentFinalTranscript || interimTranscript) {
           lastSpeechTime = Date.now();
           hasSpokenSomething = true;
           clearSilenceTimer();
           
+          // Capture current transcript for use in extraction
+          capturedTranscript = fullTranscript.trim();
+          console.log('💾 Captured transcript for extraction:', capturedTranscript);
+          
           // Start silence detection - stop after 2 seconds of silence
           silenceTimer = setTimeout(() => {
             console.log('🔇 Detected 2 seconds of silence, auto-stopping...');
+            console.log('💾 Final captured transcript:', capturedTranscript);
             if (recognitionRef.current && isListening && hasSpokenSomething) {
               recognitionRef.current.stop();
             }
           }, 2000);
         }
-        
-        // Update display transcript with both final and interim
-        const fullTranscript = finalTranscript + currentFinalTranscript + interimTranscript;
-        setTranscript(fullTranscript);
-        onTranscript(fullTranscript);
       };
     }
     return () => {

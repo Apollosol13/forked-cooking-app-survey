@@ -676,24 +676,34 @@ function App() {
                       
                       {/* Macros Section */}
                       <div className="bg-gray-800 rounded-xl p-6 mb-8">
-                        <h2 className="text-xl font-bold mb-4 text-center">MACROS</h2>
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          <div className="text-center">
-                            <div className="text-2xl font-bold">{generatedRecipe.nutrition.protein}g</div>
-                            <div className="text-gray-400 text-sm">Protein</div>
+                        <h2 className="text-xl font-bold mb-6 text-center">MACROS</h2>
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                          {/* Protein - Green/Teal */}
+                          <div className="text-center bg-gradient-to-br from-emerald-900 to-teal-900 rounded-lg p-4 border border-emerald-700/30">
+                            <div className="text-emerald-300 mb-1">💪</div>
+                            <div className="text-2xl font-bold text-emerald-100">{generatedRecipe.nutrition.protein}g</div>
+                            <div className="text-emerald-300 text-sm font-medium">Protein</div>
                           </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold">{generatedRecipe.nutrition.carbs}g</div>
-                            <div className="text-gray-400 text-sm">Carbs</div>
+                          {/* Carbs - Orange/Amber */}
+                          <div className="text-center bg-gradient-to-br from-orange-900 to-amber-900 rounded-lg p-4 border border-orange-700/30">
+                            <div className="text-orange-300 mb-1">⚡</div>
+                            <div className="text-2xl font-bold text-orange-100">{generatedRecipe.nutrition.carbs}g</div>
+                            <div className="text-orange-300 text-sm font-medium">Carbs</div>
                           </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold">{generatedRecipe.nutrition.fat}g</div>
-                            <div className="text-gray-400 text-sm">Fat</div>
+                          {/* Fat - Purple/Blue */}
+                          <div className="text-center bg-gradient-to-br from-purple-900 to-blue-900 rounded-lg p-4 border border-purple-700/30">
+                            <div className="text-purple-300 mb-1">🥑</div>
+                            <div className="text-2xl font-bold text-purple-100">{generatedRecipe.nutrition.fat}g</div>
+                            <div className="text-purple-300 text-sm font-medium">Fat</div>
                           </div>
                         </div>
+                        {/* Calories - Gold/Yellow */}
                         <div className="text-center pt-4 border-t border-gray-700">
-                          <div className="text-3xl font-bold">{generatedRecipe.nutrition.calories}</div>
-                          <div className="text-gray-400">Calories per serving</div>
+                          <div className="bg-gradient-to-br from-yellow-900 to-amber-900 rounded-lg p-4 border border-yellow-700/30 inline-block">
+                            <div className="text-yellow-300 mb-1">🔥</div>
+                            <div className="text-3xl font-bold text-yellow-100">{generatedRecipe.nutrition.calories}</div>
+                            <div className="text-yellow-300 font-medium">Calories per serving</div>
+                          </div>
                         </div>
                       </div>
                       
