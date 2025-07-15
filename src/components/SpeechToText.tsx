@@ -67,7 +67,7 @@ Return only the JSON array:`;
         console.log('✅ Successfully parsed Gemini ingredients:', ingredients);
         console.log('🎯 Ingredient count:', ingredients.length);
         console.log('🔍 Each ingredient:');
-        ingredients.forEach((ing, i) => {
+        ingredients.forEach((ing: string, i: number) => {
           console.log(`  ${i + 1}. "${ing}" (type: ${typeof ing}, length: ${ing.length})`);
         });
         return ingredients;
@@ -89,7 +89,7 @@ Return only the JSON array:`;
         const ingredients = JSON.parse(arrayMatch[0]);
         console.log('✅ Extracted ingredients from Gemini text:', ingredients);
         console.log('🎯 Ingredient count:', ingredients.length);
-        ingredients.forEach((ing, i) => {
+        ingredients.forEach((ing: string, i: number) => {
           console.log(`  ${i + 1}. "${ing}" (type: ${typeof ing}, length: ${ing.length})`);
         });
         return ingredients;
@@ -211,12 +211,14 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       const recognition = recognitionRef.current;
-      recognition.continuous = false; // Change to false for automatic stopping
+      recognition.continuous = true; // Keep continuous but handle silence detection manually
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      // Add timeout to auto-stop if speech goes too long
-      
+      let silenceTimer: NodeJS.Timeout | null = null;
+      let lastSpeechTime = Date.now();
+      let hasSpokenSomething = false;
+
       // Clear any existing timeout when starting
       const clearSpeechTimeout = () => {
         if (speechTimeoutRef.current) {
@@ -225,11 +227,23 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
         }
       };
 
+      const clearSilenceTimer = () => {
+        if (silenceTimer) {
+          clearTimeout(silenceTimer);
+          silenceTimer = null;
+        }
+      };
+
       recognition.onstart = () => {
+        console.log('🎤 Speech recognition started');
         setIsListening(true);
         setError(null);
         setFinalTranscript('');
+        setTranscript('');
         clearSpeechTimeout();
+        clearSilenceTimer();
+        hasSpokenSomething = false;
+        lastSpeechTime = Date.now();
         
         // Set a maximum timeout of 30 seconds
         speechTimeoutRef.current = setTimeout(() => {
@@ -241,38 +255,51 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       };
 
       recognition.onend = async () => {
+        console.log('🏁 Speech recognition ended');
         setIsListening(false);
         clearSpeechTimeout();
+        clearSilenceTimer();
         
-        // Only extract ingredients if we have a final transcript
-        if (finalTranscript.trim()) {
-          console.log('🎤 Speech ended naturally, extracting ingredients from final transcript:', finalTranscript);
-          console.log('📊 finalTranscript.trim():', `"${finalTranscript.trim()}"`);
-          console.log('🔍 About to call extractIngredientsFromText...');
+        // Only extract ingredients if we have spoken something and have a transcript
+        const transcriptToUse = finalTranscript.trim() || transcript.trim();
+        if (hasSpokenSomething && transcriptToUse) {
+          console.log('🎤 Speech ended naturally, extracting ingredients from transcript:', transcriptToUse);
           setIsExtracting(true);
           setError(null);
           try {
             console.log('🚀 Using Gemini AI extraction');
-            const geminiIngredients = await extractIngredientsFromText(finalTranscript);
+            const geminiIngredients = await extractIngredientsFromText(transcriptToUse);
             console.log('🎯 Gemini extracted ingredients:', geminiIngredients);
             onIngredientsDetected(geminiIngredients);
           } catch (err: any) {
             console.error('❌ Gemini extraction failed, using fallback:', err);
             // Fallback to simple extraction if Gemini fails
-            const simpleIngredients = extractIngredientsSimple(finalTranscript);
+            const simpleIngredients = extractIngredientsSimple(transcriptToUse);
             console.log('🎯 Fallback extracted ingredients:', simpleIngredients);
             onIngredientsDetected(simpleIngredients);
             setError('Using fallback extraction (Gemini AI unavailable)');
           } finally {
             setIsExtracting(false);
           }
+        } else if (!hasSpokenSomething) {
+          console.log('🔇 No speech detected - not extracting ingredients');
         }
       };
 
       recognition.onerror = (event: any) => {
+        console.log('⚠️ Speech recognition error:', event.error);
+        // Don't show errors for common expected cases
+        if (event.error === 'aborted' || event.error === 'no-speech') {
+          console.log('🔇 Ignoring expected error:', event.error);
+          setIsListening(false);
+          clearSpeechTimeout();
+          clearSilenceTimer();
+          return;
+        }
         setError(`Speech recognition error: ${event.error}`);
         setIsListening(false);
         clearSpeechTimeout();
+        clearSilenceTimer();
       };
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -291,6 +318,22 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
         // Update final transcript only with final results
         if (currentFinalTranscript) {
           setFinalTranscript(prev => prev + currentFinalTranscript);
+          hasSpokenSomething = true;
+        }
+        
+        // If we have any speech (final or interim), update the last speech time
+        if (currentFinalTranscript || interimTranscript) {
+          lastSpeechTime = Date.now();
+          hasSpokenSomething = true;
+          clearSilenceTimer();
+          
+          // Start silence detection - stop after 2 seconds of silence
+          silenceTimer = setTimeout(() => {
+            console.log('🔇 Detected 2 seconds of silence, auto-stopping...');
+            if (recognitionRef.current && isListening && hasSpokenSomething) {
+              recognitionRef.current.stop();
+            }
+          }, 2000);
         }
         
         // Update display transcript with both final and interim
@@ -385,7 +428,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
           )}
         </button>
         <p className="text-sm text-gray-400 mt-2">
-          {isListening ? 'Listening... Will stop when you finish speaking' : 'Click to speak your ingredients'}
+          {isListening ? 'Listening... Will auto-stop after 2 seconds of silence' : 'Click to speak your ingredients'}
         </p>
       </div>
 
