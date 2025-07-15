@@ -193,6 +193,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
   const [isExtracting, setIsExtracting] = useState(false);
   const [finalTranscript, setFinalTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // DEBUG: Check API key immediately
   useEffect(() => {
@@ -210,21 +211,42 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       const recognition = recognitionRef.current;
-      recognition.continuous = true;
+      recognition.continuous = false; // Change to false for automatic stopping
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+
+      // Add timeout to auto-stop if speech goes too long
+      
+      // Clear any existing timeout when starting
+      const clearSpeechTimeout = () => {
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+          speechTimeoutRef.current = null;
+        }
+      };
 
       recognition.onstart = () => {
         setIsListening(true);
         setError(null);
         setFinalTranscript('');
+        clearSpeechTimeout();
+        
+        // Set a maximum timeout of 30 seconds
+        speechTimeoutRef.current = setTimeout(() => {
+          console.log('⏰ Speech timeout - auto stopping after 30 seconds');
+          if (recognitionRef.current && isListening) {
+            recognitionRef.current.stop();
+          }
+        }, 30000);
       };
 
       recognition.onend = async () => {
         setIsListening(false);
+        clearSpeechTimeout();
+        
         // Only extract ingredients if we have a final transcript
         if (finalTranscript.trim()) {
-          console.log('🎤 Speech ended, extracting ingredients from final transcript:', finalTranscript);
+          console.log('🎤 Speech ended naturally, extracting ingredients from final transcript:', finalTranscript);
           console.log('📊 finalTranscript.trim():', `"${finalTranscript.trim()}"`);
           console.log('🔍 About to call extractIngredientsFromText...');
           setIsExtracting(true);
@@ -250,6 +272,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
       recognition.onerror = (event: any) => {
         setError(`Speech recognition error: ${event.error}`);
         setIsListening(false);
+        clearSpeechTimeout();
       };
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -279,6 +302,10 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
+      }
+      // Clear any active timeout
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
       }
     };
   }, [onTranscript, onIngredientsDetected, finalTranscript]);
@@ -358,7 +385,7 @@ const SpeechToText: React.FC<SpeechToTextProps> = ({
           )}
         </button>
         <p className="text-sm text-gray-400 mt-2">
-          {isListening ? 'Listening... Click to stop' : 'Click to speak your ingredients'}
+          {isListening ? 'Listening... Will stop when you finish speaking' : 'Click to speak your ingredients'}
         </p>
       </div>
 
