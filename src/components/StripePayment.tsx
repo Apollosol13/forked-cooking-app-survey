@@ -8,6 +8,7 @@ import {
 import { loadStripe } from '@stripe/stripe-js';
 
 // Load Stripe outside of component to avoid recreating
+console.log('🔑 Stripe publishable key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.substring(0, 20) + '...');
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const CARD_ELEMENT_OPTIONS = {
