@@ -28,9 +28,6 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    console.log('🔐 Stripe secret key exists:', !!process.env.STRIPE_SECRET_KEY);
-    console.log('🔐 Stripe secret key prefix:', process.env.STRIPE_SECRET_KEY?.substring(0, 20) + '...');
-    
     const { amount, currency = 'usd', userId } = JSON.parse(event.body);
 
     // Validate required fields
