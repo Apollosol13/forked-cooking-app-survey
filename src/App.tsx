@@ -6,6 +6,7 @@ import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
 import { ServingsSlider } from './components/ServingsSlider';
 import SpeechToText from './components/SpeechToText';
+import StripePayment from './components/StripePayment';
 import Lottie from 'lottie-react';
 import loadingAnimationData from './assets/loading-animation.json';
 import confettiAnimationData from './assets/confetti-animation.json';
@@ -128,6 +129,9 @@ function App() {
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
   const [remainingGenerations, setRemainingGenerations] = useState(3);
   const [surveyAlreadyCompleted, setSurveyAlreadyCompleted] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string>('');
+  const [hasAccessPurchased, setHasAccessPurchased] = useState(false);
 
   // Calculate progress
   const progress = ((currentQuestion + 1) / questions.length) * 100;
@@ -303,6 +307,9 @@ function App() {
         useEffect(() => {
           if (user) {
             setSurveyAlreadyCompleted(hasSurveyBeenCompleted(user.id));
+            // Check if user already purchased access
+            const hasPurchased = localStorage.getItem(`access_purchased_${user.id}`) === 'true';
+            setHasAccessPurchased(hasPurchased);
           }
         }, [user]);
 
@@ -451,8 +458,28 @@ function App() {
 
         // Handle Try Now button - require authentication (already authenticated at this point)
         const handleTryNow = () => {
+          if (hasAccessPurchased) {
+            // User already purchased, go directly to recipe generator
+            setShowRecipeGenerator(true);
+            setShowPricing(false);
+          } else {
+            // Show payment form
+            setShowPayment(true);
+            setPaymentError('');
+          }
+        };
+
+        const handlePaymentSuccess = () => {
+          setHasAccessPurchased(true);
+          setShowPayment(false);
           setShowRecipeGenerator(true);
           setShowPricing(false);
+          // Store purchase status in localStorage
+          localStorage.setItem(`access_purchased_${user.id}`, 'true');
+        };
+
+        const handlePaymentError = (error: string) => {
+          setPaymentError(error);
         };
 
         // Pricing Page with Authentication Protection
@@ -546,12 +573,37 @@ function App() {
                       </div>
                     </div>
                     
-                    <button
-                      onClick={handleTryNow}
-                      className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
-                    >
-                      {user ? 'Try Now →' : 'Sign In to Try →'}
-                    </button>
+                    {showPayment ? (
+                      <div className="space-y-6">
+                        <h3 className="text-xl font-bold mb-4">Complete Your Purchase</h3>
+                        
+                        {paymentError && (
+                          <div className="bg-red-600 text-white p-3 rounded-lg mb-4">
+                            {paymentError}
+                          </div>
+                        )}
+                        
+                        <StripePayment
+                          userId={user.id}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                        />
+                        
+                        <button
+                          onClick={() => setShowPayment(false)}
+                          className="text-gray-400 hover:text-white transition-colors underline"
+                        >
+                          ← Back to pricing
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleTryNow}
+                        className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
+                      >
+                        {hasAccessPurchased ? 'Access Recipe Generator →' : user ? 'Pay $0.99 to Continue →' : 'Sign In to Try →'}
+                      </button>
+                    )}
                   </div>
 
                   <button
@@ -677,32 +729,44 @@ function App() {
                       {/* Macros Section */}
                       <div className="bg-gray-800 rounded-xl p-6 mb-8">
                         <h2 className="text-xl font-bold mb-6 text-center">MACROS</h2>
-                        <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="grid grid-cols-3 gap-3 mb-6">
                           {/* Protein - Green/Teal */}
-                          <div className="text-center bg-gradient-to-br from-emerald-900 to-teal-900 rounded-lg p-4 border border-emerald-700/30">
-                            <div className="text-emerald-300 mb-1">💪</div>
-                            <div className="text-2xl font-bold text-emerald-100">{generatedRecipe.nutrition.protein}g</div>
-                            <div className="text-emerald-300 text-sm font-medium">Protein</div>
+                          <div 
+                            className="text-center bg-gradient-to-br from-emerald-900 to-teal-900 rounded-lg p-3 border border-emerald-700/30 shadow-lg shadow-emerald-900/20 min-h-[100px] flex flex-col justify-center"
+                            style={{ background: 'linear-gradient(to bottom right, #064e3b, #134e4a)', borderColor: '#047857' }}
+                          >
+                            <div className="text-emerald-300 mb-1 text-lg" style={{ color: '#6ee7b7' }}>💪</div>
+                            <div className="text-xl md:text-2xl font-bold text-emerald-100" style={{ color: '#d1fae5' }}>{generatedRecipe.nutrition.protein}g</div>
+                            <div className="text-emerald-300 text-xs md:text-sm font-medium" style={{ color: '#6ee7b7' }}>Protein</div>
                           </div>
                           {/* Carbs - Orange/Amber */}
-                          <div className="text-center bg-gradient-to-br from-orange-900 to-amber-900 rounded-lg p-4 border border-orange-700/30">
-                            <div className="text-orange-300 mb-1">⚡</div>
-                            <div className="text-2xl font-bold text-orange-100">{generatedRecipe.nutrition.carbs}g</div>
-                            <div className="text-orange-300 text-sm font-medium">Carbs</div>
+                          <div 
+                            className="text-center bg-gradient-to-br from-orange-900 to-amber-900 rounded-lg p-3 border border-orange-700/30 min-h-[100px] flex flex-col justify-center"
+                            style={{ background: 'linear-gradient(to bottom right, #7c2d12, #78350f)', borderColor: '#c2410c' }}
+                          >
+                            <div className="text-orange-300 mb-1 text-lg" style={{ color: '#fdba74' }}>⚡</div>
+                            <div className="text-xl md:text-2xl font-bold text-orange-100" style={{ color: '#ffedd5' }}>{generatedRecipe.nutrition.carbs}g</div>
+                            <div className="text-orange-300 text-xs md:text-sm font-medium" style={{ color: '#fdba74' }}>Carbs</div>
                           </div>
                           {/* Fat - Purple/Blue */}
-                          <div className="text-center bg-gradient-to-br from-purple-900 to-blue-900 rounded-lg p-4 border border-purple-700/30">
-                            <div className="text-purple-300 mb-1">🥑</div>
-                            <div className="text-2xl font-bold text-purple-100">{generatedRecipe.nutrition.fat}g</div>
-                            <div className="text-purple-300 text-sm font-medium">Fat</div>
+                          <div 
+                            className="text-center bg-gradient-to-br from-purple-900 to-blue-900 rounded-lg p-3 border border-purple-700/30 min-h-[100px] flex flex-col justify-center"
+                            style={{ background: 'linear-gradient(to bottom right, #581c87, #1e3a8a)', borderColor: '#7e22ce' }}
+                          >
+                            <div className="text-purple-300 mb-1 text-lg" style={{ color: '#d8b4fe' }}>🥑</div>
+                            <div className="text-xl md:text-2xl font-bold text-purple-100" style={{ color: '#f3e8ff' }}>{generatedRecipe.nutrition.fat}g</div>
+                            <div className="text-purple-300 text-xs md:text-sm font-medium" style={{ color: '#d8b4fe' }}>Fat</div>
                           </div>
                         </div>
                         {/* Calories - Gold/Yellow */}
                         <div className="text-center pt-4 border-t border-gray-700">
-                          <div className="bg-gradient-to-br from-yellow-900 to-amber-900 rounded-lg p-4 border border-yellow-700/30 inline-block">
-                            <div className="text-yellow-300 mb-1">🔥</div>
-                            <div className="text-3xl font-bold text-yellow-100">{generatedRecipe.nutrition.calories}</div>
-                            <div className="text-yellow-300 font-medium">Calories per serving</div>
+                          <div 
+                            className="bg-gradient-to-br from-yellow-900 to-amber-900 rounded-lg p-4 border border-yellow-700/30 inline-block w-full max-w-xs mx-auto"
+                            style={{ background: 'linear-gradient(to bottom right, #713f12, #78350f)', borderColor: '#a16207' }}
+                          >
+                            <div className="text-yellow-300 mb-2 text-xl" style={{ color: '#fde047' }}>🔥</div>
+                            <div className="text-2xl md:text-3xl font-bold text-yellow-100" style={{ color: '#fef3c7' }}>{generatedRecipe.nutrition.calories}</div>
+                            <div className="text-yellow-300 text-sm md:text-base font-medium" style={{ color: '#fde047' }}>Calories per serving</div>
                           </div>
                         </div>
                       </div>
