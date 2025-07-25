@@ -115,6 +115,31 @@ const clearSurveyData = (userId: string) => {
   localStorage.removeItem(`survey_answers_${userId}`);
 };
 
+// Helper functions for managing generation usage
+const getGenerationUsageKey = (userId: string) => `generation_usage_${userId}`;
+
+const getGenerationsUsed = (userId: string): number => {
+  const stored = localStorage.getItem(getGenerationUsageKey(userId));
+  return stored ? parseInt(stored, 10) : 0;
+};
+
+const incrementGenerationUsage = (userId: string): number => {
+  const currentUsage = getGenerationsUsed(userId);
+  const newUsage = currentUsage + 1;
+  localStorage.setItem(getGenerationUsageKey(userId), newUsage.toString());
+  return newUsage;
+};
+
+const getRemainingGenerations = (userId: string): number => {
+  const MAX_GENERATIONS = 3;
+  const used = getGenerationsUsed(userId);
+  return Math.max(0, MAX_GENERATIONS - used);
+};
+
+const resetGenerationUsage = (userId: string) => {
+  localStorage.removeItem(getGenerationUsageKey(userId));
+};
+
 function App() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -234,7 +259,10 @@ function App() {
   };
 
   const generateRecipe = async () => {
-    if (remainingGenerations <= 0) return;
+    if (remainingGenerations <= 0) {
+      alert('You have used all 3 of your recipe generations. Thank you for trying ForkedAI!');
+      return;
+    }
     
     const validIngredients = ingredients.filter(ing => ing.trim() !== '');
     if (validIngredients.length === 0) return;
@@ -267,7 +295,7 @@ function App() {
       };
       
       setGeneratedRecipe(recipe);
-      setRemainingGenerations(prev => prev - 1);
+      // Note: Generation counting is now handled by generateRecipeWithTracking
       
       console.log('🎉 Recipe generated successfully! Triggering confetti...');
       
@@ -310,8 +338,38 @@ function App() {
             // Check if user already purchased access
             const hasPurchased = localStorage.getItem(`access_purchased_${user.id}`) === 'true';
             setHasAccessPurchased(hasPurchased);
+            // Load remaining generations from localStorage
+            const remaining = getRemainingGenerations(user.id);
+            setRemainingGenerations(remaining);
           }
         }, [user]);
+
+        // Override generateRecipe to handle persistent usage tracking
+        const generateRecipeWithTracking = async () => {
+          if (!user) return;
+          
+          // Check remaining generations from localStorage (most up-to-date)
+          const currentRemaining = getRemainingGenerations(user.id);
+          if (currentRemaining <= 0) {
+            alert('You have used all 3 of your recipe generations. Thank you for trying ForkedAI!');
+            return;
+          }
+          
+          // Store the previous recipe state to check if generation was successful
+          const previousRecipe = generatedRecipe;
+          
+          // Call the original generateRecipe function
+          await generateRecipe();
+          
+          // If generation was successful (a new recipe was generated), increment usage
+          // We check this by seeing if the recipe changed or if we now have a recipe when we didn't before
+          if (generatedRecipe && generatedRecipe !== previousRecipe) {
+            incrementGenerationUsage(user.id);
+            const newRemaining = getRemainingGenerations(user.id);
+            setRemainingGenerations(newRemaining);
+            console.log(`🔢 Generation used. Remaining: ${newRemaining}/3`);
+          }
+        };
 
         // Welcome Screen - Show when no user is signed in
         if (!user) {
@@ -476,6 +534,9 @@ function App() {
           setShowPricing(false);
           // Store purchase status in localStorage
           localStorage.setItem(`access_purchased_${user.id}`, 'true');
+          // Reset generation usage to give user fresh 3 generations
+          resetGenerationUsage(user.id);
+          setRemainingGenerations(3);
         };
 
         const handlePaymentError = (error: string) => {
@@ -961,7 +1022,7 @@ function App() {
                   {/* Generate Recipe Button */}
                   <div className="mb-8">
                     <button
-                      onClick={generateRecipe}
+                      onClick={generateRecipeWithTracking}
                       disabled={isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0}
                       className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
                         isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0
