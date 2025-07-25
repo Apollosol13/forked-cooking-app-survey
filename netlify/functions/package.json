@@ -4,7 +4,9 @@
   "description": "Netlify Functions for cooking survey app",
   "main": "index.js",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "openai": "^5.10.2",
     "replicate": "^1.0.1",
     "stripe": "^14.21.0"
   }
-} 
+}
