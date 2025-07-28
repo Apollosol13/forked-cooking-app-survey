@@ -68,28 +68,81 @@ exports.handler = async (event, context) => {
     }
 
     // Initialize OpenAI with server-side key
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+    
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY, // Server-side only, no VITE_ prefix
+      apiKey: apiKey, // Server-side only, no VITE_ prefix
     });
 
-    // Generate recipe (simplified for security)
+    // Generate recipe with structured JSON output
+    const ingredientsText = ingredients.join(', ');
+    
+    const prompt = `Create a detailed, professional recipe using these ingredients: ${ingredientsText} for ${servings} servings.
+
+Return your response as a JSON object with this exact structure:
+{
+  "title": "Recipe Name",
+  "difficulty": "Easy" or "Medium" or "Hard",
+  "time": "XX minutes",
+  "ingredients": ["ingredient 1", "ingredient 2", ...],
+  "instructions": ["step 1", "step 2", ...],
+  "nutrition": {
+    "calories": number,
+    "protein": number,
+    "carbs": number,
+    "fat": number
+  }
+}
+
+Important: Return ONLY the JSON object, no additional text or formatting.`;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "You are a professional chef. Create a recipe using the provided ingredients."
+          content: "You are a professional chef. Return only valid JSON responses with no additional text or formatting."
         },
         {
           role: "user",
-          content: `Create a recipe for ${servings} servings using: ${ingredients.join(', ')}`
+          content: prompt
         }
       ],
-      max_tokens: 1000,
+      max_tokens: 1500,
       temperature: 0.7,
     });
 
-    const recipe = JSON.parse(completion.choices[0]?.message?.content || '{}');
+    // Extract the response content
+    const responseContent = completion.choices[0]?.message?.content;
+    
+    if (!responseContent) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Clean the response (remove markdown formatting if present)
+    let cleanedResponse = responseContent.trim();
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
+    // Parse the JSON response
+    let recipe;
+    try {
+      recipe = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      throw new Error('Invalid JSON response from AI');
+    }
+
+    // Validate the recipe structure
+    if (!recipe.title || !recipe.ingredients || !recipe.instructions) {
+      throw new Error('AI returned incomplete recipe');
+    }
 
     return {
       statusCode: 200,

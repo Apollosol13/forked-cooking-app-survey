@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, User, LogOut } from 'lucide-react';
-import { generateRecipe as generateRecipeWithAI, type GeneratedRecipe } from './api/openai';
+import { type GeneratedRecipe } from "./api/openai";
 import { generateFoodImage } from './api/backend';
 import Auth, { User as AuthUser } from './components/Auth';
 import LoadingAnimation from './components/LoadingAnimation';
@@ -140,6 +140,13 @@ const resetGenerationUsage = (userId: string) => {
   localStorage.removeItem(getGenerationUsageKey(userId));
 };
 
+const addGenerations = (userId: string, amount: number): number => {
+  const currentUsed = getGenerationsUsed(userId);
+  const newUsedCount = Math.max(0, currentUsed - amount); // Reduce used count = add available
+  localStorage.setItem(getGenerationUsageKey(userId), newUsedCount.toString());
+  return getRemainingGenerations(userId);
+};
+
 function App() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -258,7 +265,7 @@ function App() {
     setIngredients(filteredIngredients);
   };
 
-  const generateRecipe = async () => {
+  const generateRecipe = async (userId: string) => {
     if (remainingGenerations <= 0) {
       alert('You have used all 3 of your recipe generations. Thank you for trying ForkedAI!');
       return;
@@ -267,18 +274,17 @@ function App() {
     const validIngredients = ingredients.filter(ing => ing.trim() !== '');
     if (validIngredients.length === 0) return;
 
-    console.log('🔄 Starting recipe generation...');
+    console.log('🔄 Starting secure recipe generation...');
     setIsGenerating(true);
     
-    // Debug: Check if API key is loaded
-    console.log('API Key loaded:', !!import.meta.env.VITE_OPENAI_API_KEY);
-    console.log('API Key starts with sk-:', import.meta.env.VITE_OPENAI_API_KEY?.startsWith('sk-'));
-    
     try {
-      // Generate recipe using OpenAI
-      console.log('Calling OpenAI with ingredients:', validIngredients, 'for', servings, 'servings');
-      const aiRecipe = await generateRecipeWithAI(validIngredients, servings);
-      console.log('Received recipe from OpenAI:', aiRecipe);
+      // Generate recipe using secure backend
+      console.log('Calling secure backend with ingredients:', validIngredients, 'for', servings, 'servings');
+      
+      // Import the secure generateRecipe function
+      const { generateRecipe: secureGenerateRecipe } = await import('./api/openai');
+      const aiRecipe = await secureGenerateRecipe(validIngredients, servings, userId);
+      console.log('Received recipe from secure backend:', aiRecipe);
       
       // Optional: Generate image for the recipe using Replicate via backend
       let recipeImage: string | undefined;
@@ -341,6 +347,22 @@ function App() {
             // Load remaining generations from localStorage
             const remaining = getRemainingGenerations(user.id);
             setRemainingGenerations(remaining);
+            console.log(`👤 User loaded: ${user.email}, Remaining generations: ${remaining}`);
+            console.log(`📊 localStorage check: ${localStorage.getItem(`generation_usage_${user.id}`)}`);
+          }
+        }, [user]);
+
+        // Add effect to sync with localStorage changes (for debugging)
+        useEffect(() => {
+          if (user) {
+            const syncCount = () => {
+              const remaining = getRemainingGenerations(user.id);
+              setRemainingGenerations(remaining);
+            };
+            
+            // Check every few seconds for changes (debugging only)
+            const interval = setInterval(syncCount, 2000);
+            return () => clearInterval(interval);
           }
         }, [user]);
 
@@ -348,26 +370,32 @@ function App() {
         const generateRecipeWithTracking = async () => {
           if (!user) return;
           
-          // Check remaining generations from localStorage (most up-to-date)
-          const currentRemaining = getRemainingGenerations(user.id);
-          if (currentRemaining <= 0) {
-            alert('You have used all 3 of your recipe generations. Thank you for trying ForkedAI!');
+          // Only allow generation if user has purchased access
+          if (!hasAccessPurchased) {
+            alert('Please purchase access to generate recipes.');
             return;
           }
           
-          // Store the previous recipe state to check if generation was successful
-          const previousRecipe = generatedRecipe;
+          // Check remaining generations from localStorage (most up-to-date)
+          const currentRemaining = getRemainingGenerations(user.id);
+          if (currentRemaining <= 0) {
+            alert('You have used all 3 of your recipe generations. Purchase more to continue!');
+            return;
+          }
           
-          // Call the original generateRecipe function
-          await generateRecipe();
-          
-          // If generation was successful (a new recipe was generated), increment usage
-          // We check this by seeing if the recipe changed or if we now have a recipe when we didn't before
-          if (generatedRecipe && generatedRecipe !== previousRecipe) {
+          try {
+            // Call the original generateRecipe function with userId
+            await generateRecipe(user.id);
+            
+            // If we reach here, generation was successful - increment usage
             incrementGenerationUsage(user.id);
             const newRemaining = getRemainingGenerations(user.id);
             setRemainingGenerations(newRemaining);
             console.log(`🔢 Generation used. Remaining: ${newRemaining}/3`);
+            console.log(`📊 localStorage value: ${localStorage.getItem(`generation_usage_${user.id}`)}`);
+          } catch (error) {
+            console.error('Recipe generation failed:', error);
+            // Don't increment usage if generation failed
           }
         };
 
@@ -434,6 +462,21 @@ function App() {
           );
         }
 
+        // Handle Try Now button - require authentication (already authenticated at this point)
+        const handleTryNow = () => {
+          if (hasAccessPurchased) {
+            // User has purchased - go to recipe generator
+            setShowRecipeGenerator(true);
+            setShowPricing(false);
+            setShowPayment(false);
+          } else {
+            // User hasn't purchased - show payment form (no free generations)
+            setShowPayment(true);
+            setShowPricing(false);
+            setPaymentError('');
+          }
+        };
+
         // Survey Already Completed Screen
         if (surveyAlreadyCompleted && !showPricing && !showRecipeGenerator) {
           return (
@@ -494,12 +537,26 @@ function App() {
                   </div>
 
                   <div className="space-y-4">
-                    <button
-                      onClick={() => setShowPricing(true)}
-                      className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Continue to Recipe Generator
-                    </button>
+                    {/* Show different messaging based on purchase status */}
+                    {hasAccessPurchased ? (
+                      <button
+                        onClick={handleTryNow}
+                        className="w-full bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors"
+                      >
+                        Continue to Recipe Generator
+                        {(() => {
+                          const remaining = getRemainingGenerations(user.id);
+                          return remaining > 0 ? ` (${remaining} generations remaining)` : '';
+                        })()}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleTryNow}
+                        className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Purchase Recipe Access - $0.99
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleRetakeSurvey(user)}
@@ -514,29 +571,27 @@ function App() {
           );
         }
 
-        // Handle Try Now button - require authentication (already authenticated at this point)
-        const handleTryNow = () => {
-          if (hasAccessPurchased) {
-            // User already purchased, go directly to recipe generator
-            setShowRecipeGenerator(true);
-            setShowPricing(false);
-          } else {
-            // Show payment form
-            setShowPayment(true);
-            setPaymentError('');
-          }
-        };
-
         const handlePaymentSuccess = () => {
+          const wasFirstPurchase = !hasAccessPurchased;
+          
           setHasAccessPurchased(true);
           setShowPayment(false);
           setShowRecipeGenerator(true);
           setShowPricing(false);
           // Store purchase status in localStorage
           localStorage.setItem(`access_purchased_${user.id}`, 'true');
-          // Reset generation usage to give user fresh 3 generations
-          resetGenerationUsage(user.id);
-          setRemainingGenerations(3);
+          
+          if (wasFirstPurchase) {
+            // First time purchase - start with 3 generations
+            resetGenerationUsage(user.id);
+            setRemainingGenerations(3);
+            console.log(`💳 First purchase - 3 generations granted`);
+          } else {
+            // Additional purchase - add 3 more generations
+            const newRemaining = addGenerations(user.id, 3);
+            setRemainingGenerations(newRemaining);
+            console.log(`💳 Added 3 more generations. Total remaining: ${newRemaining}`);
+          }
         };
 
         const handlePaymentError = (error: string) => {
@@ -871,17 +926,36 @@ function App() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4">
-                        <button
-                          onClick={resetForNewRecipe}
-                          disabled={remainingGenerations <= 0}
-                          className={`flex-1 px-6 py-3 rounded-lg font-medium transition-colors ${
-                            remainingGenerations <= 0
-                              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                              : 'bg-white text-black hover:bg-gray-200'
-                          }`}
-                        >
-                          {remainingGenerations <= 0 ? 'No generations left' : 'Generate Another Recipe'}
-                        </button>
+                        {hasAccessPurchased ? (
+                          remainingGenerations <= 0 ? (
+                            <button
+                              onClick={() => {
+                                setShowPayment(true);
+                                setPaymentError('');
+                              }}
+                              className="flex-1 px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Purchase More Generations - $0.99
+                            </button>
+                          ) : (
+                            <button
+                              onClick={resetForNewRecipe}
+                              className="flex-1 px-6 py-3 rounded-lg font-medium transition-colors bg-white text-black hover:bg-gray-200"
+                            >
+                              Generate Another Recipe
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setShowPayment(true);
+                              setPaymentError('');
+                            }}
+                            className="flex-1 px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                          >
+                            Purchase Recipe Access - $0.99
+                          </button>
+                        )}
                         
                         <button
                           onClick={handleRestart}
@@ -1013,9 +1087,9 @@ function App() {
                   <div className="mb-8">
                     <h3 className="text-xl font-bold mb-4 text-center">🎤 Or Speak Your Ingredients</h3>
                     <SpeechToText
-                      onTranscript={handleSpeechTranscript}
+                      onTranscriptChange={handleSpeechTranscript}
                       onIngredientsDetected={handleIngredientsDetected}
-                      className="max-w-md mx-auto"
+                      userId={user.id}
                     />
                   </div>
 
@@ -1023,15 +1097,47 @@ function App() {
                   <div className="mb-8">
                     <button
                       onClick={generateRecipeWithTracking}
-                      disabled={isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0}
+                      disabled={isGenerating || !hasAccessPurchased || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0}
                       className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
-                        isGenerating || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0
+                        isGenerating || !hasAccessPurchased || remainingGenerations <= 0 || ingredients.filter(ing => ing.trim() !== '').length === 0
                           ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                           : 'bg-white text-black hover:bg-gray-200'
                       }`}
                     >
                       {isGenerating ? 'Generating Recipe...' : 'Generate Recipe'}
                     </button>
+
+                    {/* Purchase More Button when generations are exhausted (only for paid users) */}
+                    {hasAccessPurchased && remainingGenerations <= 0 && !isGenerating && (
+                      <div className="mt-4 text-center">
+                        <p className="text-gray-400 text-sm mb-3">You've used all your paid generations!</p>
+                        <button
+                          onClick={() => {
+                            setShowPayment(true);
+                            setPaymentError('');
+                          }}
+                          className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          Get 3 More Generations - $0.99
+                        </button>
+                      </div>
+                    )}
+
+                    {/* First-time purchase button for users who haven't bought access */}
+                    {!hasAccessPurchased && !isGenerating && (
+                      <div className="mt-4 text-center">
+                        <p className="text-gray-400 text-sm mb-3">Purchase access to start generating recipes!</p>
+                        <button
+                          onClick={() => {
+                            setShowPayment(true);
+                            setPaymentError('');
+                          }}
+                          className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          Purchase Recipe Access - $0.99
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -1042,6 +1148,40 @@ function App() {
                   </button>
                 </div>
               </div>
+
+              {/* Payment Form in Recipe Generator */}
+              {showPayment && (
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                  <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
+                    <h3 className="text-xl font-bold mb-4 text-center">Get 3 More Generations</h3>
+                    <p className="text-gray-300 text-center mb-6">
+                      {hasAccessPurchased 
+                        ? "Add 3 more recipe generations to your account for $0.99"
+                        : "Get access to the recipe generator for $0.99"
+                      }
+                    </p>
+                    
+                    {paymentError && (
+                      <div className="bg-red-600 text-white p-3 rounded-lg mb-4">
+                        {paymentError}
+                      </div>
+                    )}
+                    
+                    <StripePayment
+                      userId={user.id}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                    />
+                    
+                    <button
+                      onClick={() => setShowPayment(false)}
+                      className="w-full mt-4 text-gray-400 hover:text-white transition-colors underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               
               {/* Loading Animation for Recipe Generator */}
               {isGenerating && (
