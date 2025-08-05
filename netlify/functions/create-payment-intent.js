@@ -6,7 +6,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
@@ -19,7 +19,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
@@ -28,6 +28,19 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Validate request body size
+    if (event.body && event.body.length > 5000) {
+      return {
+        statusCode: 413,
+        headers: {
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({ error: 'Request too large' })
+      };
+    }
+
     const { amount, currency = 'usd', userId } = JSON.parse(event.body);
 
     // Validate required fields
@@ -35,11 +48,37 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         body: JSON.stringify({ error: 'Missing required fields: amount, userId' })
+      };
+    }
+
+    // Validate amount (should be 99 cents for $0.99)
+    if (typeof amount !== 'number' || amount < 50 || amount > 50000) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({ error: 'Invalid amount' })
+      };
+    }
+
+    // Validate userId length
+    if (userId.length > 255) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({ error: 'UserId too long' })
       };
     }
 
@@ -58,7 +97,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
@@ -72,7 +111,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },

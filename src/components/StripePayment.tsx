@@ -31,7 +31,7 @@ const CARD_ELEMENT_OPTIONS = {
 
 interface CheckoutFormProps {
   userId: string;
-  onSuccess: () => void;
+  onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
 }
 
@@ -93,7 +93,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ userId, onSuccess, onError 
         onError(result.error.message || 'Payment failed');
       } else if (result.paymentIntent?.status === 'succeeded') {
         // Payment successful!
-        onSuccess();
+        onSuccess(result.paymentIntent.id);
       } else {
         onError('Payment was not completed successfully');
       }
@@ -167,7 +167,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ userId, onSuccess, onError 
 
 interface StripePaymentProps {
   userId: string;
-  onSuccess: () => void;
+  onSuccess: (paymentIntentId: string) => void;
   onError: (error: string) => void;
 }
 

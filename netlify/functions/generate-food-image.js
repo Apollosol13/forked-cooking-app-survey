@@ -11,7 +11,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
@@ -24,7 +24,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ error: 'Recipe title is required' }),
@@ -50,7 +50,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ error: 'Replicate API token not configured' }),
@@ -104,7 +104,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ imageUrl: imageUrl }),
@@ -114,7 +114,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://forkedai.com',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
@@ -132,7 +132,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 

@@ -10,6 +10,7 @@ import StripePayment from './components/StripePayment';
 import Lottie from 'lottie-react';
 import loadingAnimationData from './assets/loading-animation.json';
 import confettiAnimationData from './assets/confetti-animation.json';
+import { getPurchaseStatus, setPurchaseStatus as setSupabasePurchaseStatus, incrementGenerationUsage as incrementSupabaseGeneration, resetGenerationUsage as resetSupabaseGeneration, addGenerations as addSupabaseGenerations } from "./lib/purchaseAPI";
 
 interface Question {
   id: string;
@@ -123,29 +124,6 @@ const getGenerationsUsed = (userId: string): number => {
   return stored ? parseInt(stored, 10) : 0;
 };
 
-const incrementGenerationUsage = (userId: string): number => {
-  const currentUsage = getGenerationsUsed(userId);
-  const newUsage = currentUsage + 1;
-  localStorage.setItem(getGenerationUsageKey(userId), newUsage.toString());
-  return newUsage;
-};
-
-const getRemainingGenerations = (userId: string): number => {
-  const MAX_GENERATIONS = 3;
-  const used = getGenerationsUsed(userId);
-  return Math.max(0, MAX_GENERATIONS - used);
-};
-
-const resetGenerationUsage = (userId: string) => {
-  localStorage.removeItem(getGenerationUsageKey(userId));
-};
-
-const addGenerations = (userId: string, amount: number): number => {
-  const currentUsed = getGenerationsUsed(userId);
-  const newUsedCount = Math.max(0, currentUsed - amount); // Reduce used count = add available
-  localStorage.setItem(getGenerationUsageKey(userId), newUsedCount.toString());
-  return getRemainingGenerations(userId);
-};
 
 function App() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -341,30 +319,26 @@ function App() {
         useEffect(() => {
           if (user) {
             setSurveyAlreadyCompleted(hasSurveyBeenCompleted(user.id));
-            // Check if user already purchased access
-            const hasPurchased = localStorage.getItem(`access_purchased_${user.id}`) === 'true';
-            setHasAccessPurchased(hasPurchased);
-            // Load remaining generations from localStorage
-            const remaining = getRemainingGenerations(user.id);
-            setRemainingGenerations(remaining);
-            console.log(`👤 User loaded: ${user.email}, Remaining generations: ${remaining}`);
-            console.log(`📊 localStorage check: ${localStorage.getItem(`generation_usage_${user.id}`)}`);
+            loadUserPurchaseData(user.email);
           }
         }, [user]);
 
-        // Add effect to sync with localStorage changes (for debugging)
-        useEffect(() => {
-          if (user) {
-            const syncCount = () => {
-              const remaining = getRemainingGenerations(user.id);
-              setRemainingGenerations(remaining);
-            };
+        const loadUserPurchaseData = async (email: string) => {
+          try {
+            console.log(`🔄 Loading purchase data for: ${email}`);
+            const status = await getPurchaseStatus(email);
             
-            // Check every few seconds for changes (debugging only)
-            const interval = setInterval(syncCount, 2000);
-            return () => clearInterval(interval);
+            setHasAccessPurchased(status.has_purchased);
+            setRemainingGenerations(status.generations_remaining);
+            
+            console.log(`✅ User data loaded from Supabase:`, status);
+          } catch (error) {
+            console.error("Failed to load user purchase data from Supabase:", error);
+            setHasAccessPurchased(false);
+            setRemainingGenerations(0);
           }
-        }, [user]);
+        };
+
 
         // Override generateRecipe to handle persistent usage tracking
         const generateRecipeWithTracking = async () => {
@@ -372,33 +346,38 @@ function App() {
           
           // Only allow generation if user has purchased access
           if (!hasAccessPurchased) {
-            alert('Please purchase access to generate recipes.');
+            alert("Please purchase access to generate recipes.");
             return;
           }
           
-          // Check remaining generations from localStorage (most up-to-date)
-          const currentRemaining = getRemainingGenerations(user.id);
-          if (currentRemaining <= 0) {
-            alert('You have used all 3 of your recipe generations. Purchase more to continue!');
+          // Check remaining generations from Supabase (cross-browser sync)
+          try {
+            const status = await getPurchaseStatus(user.email);
+            if (status.generations_remaining <= 0) {
+              alert("You have used all 3 of your recipe generations. Purchase more to continue!");
+              return;
+            }
+          } catch (error) {
+            console.error("Failed to check generation status:", error);
+            alert("Unable to verify generation status. Please try again.");
             return;
           }
           
           try {
-            // Call the original generateRecipe function with userId
+            // Call the original generateRecipe function
             await generateRecipe(user.id);
             
-            // If we reach here, generation was successful - increment usage
-            incrementGenerationUsage(user.id);
-            const newRemaining = getRemainingGenerations(user.id);
-            setRemainingGenerations(newRemaining);
-            console.log(`🔢 Generation used. Remaining: ${newRemaining}/3`);
-            console.log(`📊 localStorage value: ${localStorage.getItem(`generation_usage_${user.id}`)}`);
+            // If successful, increment usage in Supabase
+            const updatedStatus = await incrementSupabaseGeneration(user.email);
+            setRemainingGenerations(updatedStatus.generations_remaining);
+            
+            console.log(`🔢 Generation used via Supabase. Remaining: ${updatedStatus.generations_remaining}/3`);
+            console.log(`📊 Supabase status:`, updatedStatus);
           } catch (error) {
-            console.error('Recipe generation failed:', error);
-            // Don't increment usage if generation failed
+            console.error("Recipe generation failed:", error);
+            // Do not increment usage if generation failed
           }
         };
-
         // Welcome Screen - Show when no user is signed in
         if (!user) {
           return (
@@ -465,13 +444,14 @@ function App() {
         // Handle Try Now button - require authentication (already authenticated at this point)
         const handleTryNow = () => {
           if (hasAccessPurchased) {
+          console.log("🔘 handleTryNow called, hasAccessPurchased:", hasAccessPurchased);
             // User has purchased - go to recipe generator
             setShowRecipeGenerator(true);
             setShowPricing(false);
             setShowPayment(false);
           } else {
             // User hasn't purchased - show payment form (no free generations)
-            setShowPayment(true);
+            console.log("🔄 Purchase More Generations clicked"); setShowPayment(true);
             setShowPricing(false);
             setPaymentError('');
           }
@@ -545,8 +525,8 @@ function App() {
                       >
                         Continue to Recipe Generator
                         {(() => {
-                          const remaining = getRemainingGenerations(user.id);
-                          return remaining > 0 ? ` (${remaining} generations remaining)` : '';
+                          // Use state variable instead of localStorage
+                          return remainingGenerations > 0 ? ` (${remainingGenerations} generations remaining)` : '';
                         })()}
                       </button>
                     ) : (
@@ -571,26 +551,32 @@ function App() {
           );
         }
 
-        const handlePaymentSuccess = () => {
+        const handlePaymentSuccess = async (stripePaymentId: string) => {
           const wasFirstPurchase = !hasAccessPurchased;
           
-          setHasAccessPurchased(true);
-          setShowPayment(false);
-          setShowRecipeGenerator(true);
-          setShowPricing(false);
-          // Store purchase status in localStorage
-          localStorage.setItem(`access_purchased_${user.id}`, 'true');
-          
-          if (wasFirstPurchase) {
-            // First time purchase - start with 3 generations
-            resetGenerationUsage(user.id);
-            setRemainingGenerations(3);
-            console.log(`💳 First purchase - 3 generations granted`);
-          } else {
-            // Additional purchase - add 3 more generations
-            const newRemaining = addGenerations(user.id, 3);
-            setRemainingGenerations(newRemaining);
-            console.log(`💳 Added 3 more generations. Total remaining: ${newRemaining}`);
+          try {
+            // Update purchase status in Supabase (cross-browser sync)
+            await setSupabasePurchaseStatus(user.email, true, stripePaymentId);
+            
+            setHasAccessPurchased(true);
+            setShowPayment(false);
+            setShowRecipeGenerator(true);
+            setShowPricing(false);
+            
+            if (wasFirstPurchase) {
+              // First time purchase - reset to 3 generations
+              const status = await resetSupabaseGeneration(user.email);
+              setRemainingGenerations(status.generations_remaining);
+              console.log(`💳 First purchase - 3 generations granted via Supabase`);
+            } else {
+              // Additional purchase - add 3 more generations
+              const status = await addSupabaseGenerations(user.email, 3);
+              setRemainingGenerations(status.generations_remaining);
+              console.log(`💳 Added 3 more generations via Supabase. Total remaining: ${status.generations_remaining}`);
+            }
+          } catch (error) {
+            console.error("Failed to update purchase status in Supabase:", error);
+            setPaymentError("Failed to process purchase. Please contact support.");
           }
         };
 
@@ -930,7 +916,7 @@ function App() {
                           remainingGenerations <= 0 ? (
                             <button
                               onClick={() => {
-                                setShowPayment(true);
+                                console.log("🔄 Purchase More Generations clicked"); setShowPayment(true);
                                 setPaymentError('');
                               }}
                               className="flex-1 px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
@@ -948,7 +934,7 @@ function App() {
                         ) : (
                           <button
                             onClick={() => {
-                              setShowPayment(true);
+                              console.log("🔄 Purchase More Generations clicked"); setShowPayment(true);
                               setPaymentError('');
                             }}
                             className="flex-1 px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
@@ -1113,7 +1099,7 @@ function App() {
                         <p className="text-gray-400 text-sm mb-3">You've used all your paid generations!</p>
                         <button
                           onClick={() => {
-                            setShowPayment(true);
+                            console.log("🔄 Purchase More Generations clicked"); setShowPayment(true);
                             setPaymentError('');
                           }}
                           className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
@@ -1129,7 +1115,7 @@ function App() {
                         <p className="text-gray-400 text-sm mb-3">Purchase access to start generating recipes!</p>
                         <button
                           onClick={() => {
-                            setShowPayment(true);
+                            console.log("🔄 Purchase More Generations clicked"); setShowPayment(true);
                             setPaymentError('');
                           }}
                           className="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"

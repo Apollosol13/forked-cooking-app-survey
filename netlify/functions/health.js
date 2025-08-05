@@ -4,7 +4,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': 'https://forkedai.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
       },
@@ -15,7 +15,7 @@ exports.handler = async (event, context) => {
   return {
     statusCode: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': 'https://forkedai.com',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ 

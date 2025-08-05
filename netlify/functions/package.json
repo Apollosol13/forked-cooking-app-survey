@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.53.0",
     "openai": "^5.10.2",
     "replicate": "^1.0.1",
     "stripe": "^14.21.0"
